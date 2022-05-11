@@ -1,17 +1,22 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from starlette import status
-
+from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import SessionLocal
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware,
+                   allow_origins='http://localhost:3000',
+                   allow_credentials=True,
+                   allow_methods=["*"],
+                   allow_headers=["*"])
 
 
 class User(BaseModel):
-    id: int
+    id: Optional[int] = None
     name: str
     email: str
     password: str
@@ -38,6 +43,7 @@ def fetch_user(user_id: int):
 
 @app.post('/users', response_model=User, status_code=status.HTTP_201_CREATED)
 def add_user(user: User):
+    print(user)
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user is not None:
         raise HTTPException(status_code=400, detail="Already registered")
@@ -53,7 +59,7 @@ def add_user(user: User):
     return new_user
 
 
-@app.put('/users/{id}', response_model=User, status_code=status.HTTP_200_OK)
+@app.put('/users/{user_id}', response_model=User, status_code=status.HTTP_200_OK)
 def update_user(user_id: int, update_user: User):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     user.name = update_user.name
@@ -63,7 +69,7 @@ def update_user(user_id: int, update_user: User):
     return user
 
 
-@app.delete('/users/{id}')
+@app.delete('/users/{user_id}')
 def delete_user(user_id: int):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user is None:
